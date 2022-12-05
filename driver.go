@@ -526,9 +526,14 @@ func (d *Driver) makeCreateServerOptions() (*hcloud.ServerCreateOpts, error) {
 		return nil, err
 	}
 
+	userDataContent, err := d.getUserDataContent()
+	if err != nil {
+		return nil, err
+	}
+
 	srvopts := hcloud.ServerCreateOpts{
 		Name:           d.GetMachineName(),
-		UserData:       d.userData,
+		UserData:       userDataContent,
 		Labels:         d.ServerLabels,
 		PlacementGroup: pgrp,
 	}
@@ -571,6 +576,18 @@ func (d *Driver) makeCreateServerOptions() (*hcloud.ServerCreateOpts, error) {
 	}
 	srvopts.SSHKeys = append(d.cachedAdditionalKeys, key)
 	return &srvopts, nil
+}
+
+func (d *Driver) getUserDataContent() (string, error) {
+	var userDataContent string
+	if info, err := os.Stat(d.userData); (err == nil || os.IsExist(err)) && !info.IsDir() {
+		fileContent, _ := os.ReadFile(d.userData)
+		userDataContent = string(fileContent)
+	} else {
+		userDataContent = d.userData
+	}
+
+	return userDataContent, nil
 }
 
 func (d *Driver) setPublicNetIfRequired(srvopts *hcloud.ServerCreateOpts) error {
